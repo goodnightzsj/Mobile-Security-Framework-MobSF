@@ -523,6 +523,8 @@ def _normalize_inventory_entry(entry):
     """Backfill optional deeplink inventory fields for legacy records."""
     normalized = dict(entry or {})
     uri = normalized.get('uri', '')
+    normalized.setdefault('component', '')
+    normalized.setdefault('match_reason', '')
     candidate_urls = normalized.get('candidate_urls')
     if candidate_urls is None:
         candidate_urls = [uri] if uri else []

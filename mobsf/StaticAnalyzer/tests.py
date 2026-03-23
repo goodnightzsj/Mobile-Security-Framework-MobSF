@@ -766,6 +766,8 @@ class DeeplinkInventoryTests(TestCase):
             inventory['candidates'][0]['candidate_urls'],
             ['https://example.com/deep/link'],
         )
+        self.assertEqual(inventory['candidates'][0]['component'], '')
+        self.assertEqual(inventory['candidates'][0]['match_reason'], '')
 
     @mock.patch('mobsf.MobSF.views.api.api_static_analysis.is_md5',
                 return_value=True)
