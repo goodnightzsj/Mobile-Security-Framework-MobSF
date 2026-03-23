@@ -23,11 +23,13 @@ from mobsf.DynamicAnalyzer.views.android.tests_frida import (
     apimon_analysis,
     dependency_analysis,
 )
+from mobsf.StaticAnalyzer.models import StaticAnalyzerAndroid
 from mobsf.MobSF.utils import (
     is_file_exists,
     is_md5,
     key,
     print_n_send_error_response,
+    python_dict,
 )
 from mobsf.MobSF.views.authentication import (
     login_required,
@@ -76,6 +78,13 @@ def view_report(request, checksum, api=False):
         trackers = trk.get_trackers_domains_or_deps(domains, deps)
         generate_download(app_dir, checksum, download_dir, package)
         images = get_screenshots(checksum, download_dir)
+        deeplink_probe_results = {}
+        try:
+            static_android_db = StaticAnalyzerAndroid.objects.get(MD5=checksum)
+            deeplink_probe_results = python_dict(
+                static_android_db.DEEPLINK_PROBE_RESULTS)
+        except Exception:
+            logger.warning('Unable to load deeplink probe results for %s', checksum)
         context = {'hash': checksum,
                    'emails': analysis_result['emails'],
                    'urls': analysis_result['urls'],
@@ -94,6 +103,7 @@ def view_report(request, checksum, api=False):
                    'trackers': trackers,
                    'frida_logs': is_file_exists(fd_log),
                    'runtime_dependencies': list(deps),
+                   'deeplink_probe_results': deeplink_probe_results,
                    'package': package,
                    'version': settings.MOBSF_VER,
                    'title': 'Dynamic Analysis'}

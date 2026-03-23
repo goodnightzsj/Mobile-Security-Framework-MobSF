@@ -122,6 +122,7 @@ def dynamic_analyzer(request, checksum, api=False):
         identifier = None
         activities = None
         deeplinks = None
+        deeplink_inventory = {}
         exported_activities = None
         if api:
             reinstall = request.POST.get('re_install', '1')
@@ -159,6 +160,8 @@ def dynamic_analyzer(request, checksum, api=False):
                 static_android_db.ACTIVITIES)
             deeplinks = python_dict(
                 static_android_db.BROWSABLE_ACTIVITIES)
+            deeplink_inventory = python_dict(
+                static_android_db.DEEPLINK_INVENTORY)
         except ObjectDoesNotExist:
             logger.warning(
                 'Failed to get Activities/Deeplinks. '
@@ -223,6 +226,7 @@ def dynamic_analyzer(request, checksum, api=False):
                    'activities': activities,
                    'exported_activities': exported_activities,
                    'deeplinks': deeplinks,
+                   'deeplink_inventory': deeplink_inventory,
                    'title': 'Dynamic Analyzer'}
         template = 'dynamic_analysis/android/dynamic_analyzer.html'
         if api:

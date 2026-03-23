@@ -51,6 +51,10 @@ def get_context_from_db_entry(db_entry: QuerySet) -> dict:
             'exported_activities': db_entry[0].EXPORTED_ACTIVITIES,
             'browsable_activities': python_dict(
                 db_entry[0].BROWSABLE_ACTIVITIES),
+            'deeplink_inventory': python_dict(
+                db_entry[0].DEEPLINK_INVENTORY),
+            'deeplink_probe_results': python_dict(
+                db_entry[0].DEEPLINK_PROBE_RESULTS),
             'activities': python_list(db_entry[0].ACTIVITIES),
             'receivers': python_list(db_entry[0].RECEIVERS),
             'providers': python_list(db_entry[0].PROVIDERS),
@@ -90,6 +94,12 @@ def get_context_from_db_entry(db_entry: QuerySet) -> dict:
             'logs': get_scan_logs(db_entry[0].MD5),
             'sbom': python_dict(db_entry[0].SBOM),
         }
+        context['reachable_deeplinks'] = context['deeplink_inventory'].get(
+            'reachable', [])
+        context['deeplink_candidates'] = context['deeplink_inventory'].get(
+            'candidates', [])
+        context['deeplink_handlers'] = context['deeplink_inventory'].get(
+            'handlers', [])
         return context
     except Exception:
         msg = 'Fetching data from the DB failed.'
@@ -128,6 +138,9 @@ def get_context_from_analysis(app_dic,
             'main_activity': man_data_dic['mainactivity'],
             'exported_activities': man_an_dic['exported_act'],
             'browsable_activities': man_an_dic['browsable_activities'],
+            'deeplink_inventory': code_an_dic.get('deeplink_inventory', {}),
+            'deeplink_probe_results': code_an_dic.get(
+                'deeplink_probe_results', {}),
             'activities': man_data_dic['activities'],
             'receivers': man_data_dic['receivers'],
             'providers': man_data_dic['providers'],
@@ -165,6 +178,12 @@ def get_context_from_analysis(app_dic,
             'logs': get_scan_logs(app_dic['md5']),
             'sbom': code_an_dic['sbom'],
         }
+        context['reachable_deeplinks'] = context['deeplink_inventory'].get(
+            'reachable', [])
+        context['deeplink_candidates'] = context['deeplink_inventory'].get(
+            'candidates', [])
+        context['deeplink_handlers'] = context['deeplink_inventory'].get(
+            'handlers', [])
         return context
     except Exception as exp:
         msg = 'Rendering to Template failed.'
@@ -195,6 +214,7 @@ def save_or_update(update_type,
             'MAIN_ACTIVITY': man_data_dic['mainactivity'],
             'EXPORTED_ACTIVITIES': man_an_dic['exported_act'],
             'BROWSABLE_ACTIVITIES': man_an_dic['browsable_activities'],
+            'DEEPLINK_INVENTORY': code_an_dic.get('deeplink_inventory', {}),
             'ACTIVITIES': man_data_dic['activities'],
             'RECEIVERS': man_data_dic['receivers'],
             'PROVIDERS': man_data_dic['providers'],

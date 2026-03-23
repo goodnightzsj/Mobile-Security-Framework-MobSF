@@ -48,6 +48,8 @@ class StaticAnalyzerAndroid(models.Model):
     MAIN_ACTIVITY = models.TextField(default='')
     EXPORTED_ACTIVITIES = models.TextField(default='')
     BROWSABLE_ACTIVITIES = models.TextField(default={})
+    DEEPLINK_INVENTORY = models.TextField(default={})
+    DEEPLINK_PROBE_RESULTS = models.TextField(default={})
     ACTIVITIES = models.TextField(default=[])
     RECEIVERS = models.TextField(default=[])
     PROVIDERS = models.TextField(default=[])

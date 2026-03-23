@@ -322,6 +322,14 @@
                             <input type="text" class="form-control form-group mb-2 mr-2" id="query" placeholder="/foo?bar=">
                             <button id="start_deeplink" type="submit" class="btn btn-primary btn-sm form-group mb-2">▶ Deeplink</button>
                           </div>
+                          {% if deeplink_inventory.summary.probe_target_count %}
+                          <div class="small text-muted mb-2">
+                            Candidate probe targets: {{ deeplink_inventory.summary.probe_target_count }}
+                          </div>
+                          <button id="probe_deeplinks" type="submit" class="btn btn-outline-primary btn-sm form-group mb-2">
+                            ▶ Probe Candidate Deeplinks
+                          </button>
+                          {% endif %}
                         </div>
                         {% endif %}
                         
@@ -897,6 +905,12 @@ $("#start_deeplink").click(function(){
   return false;
 });
 
+$("#probe_deeplinks").click(function(){
+  print_status("Probing saved deeplink candidates...");
+  probe_deeplinks();
+  return false;
+});
+
 
 // Start up
 {% if android_version < 5 %}
@@ -1207,6 +1221,23 @@ function start_deeplink(url){
       print_status("Deeplink Triggered");
     else
       print_status(json.message);
+  });
+}
+
+function probe_deeplinks(){
+  action('{% url "probe_deeplinks" %}', {hash: '{{ hash }}'}, function(json) {
+    if (json.status === "ok") {
+      print_status(
+        "Deeplink probe completed. matched=" + json.summary.matched +
+        " missed=" + json.summary.missed +
+        " errors=" + json.summary.errors);
+      json.results.forEach(function(result) {
+        let destination = result.matched_activity ? " -> " + result.matched_activity : "";
+        print_status("[" + result.status + "] " + result.url + destination);
+      });
+    } else {
+      print_status(json.message);
+    }
   });
 }
 

@@ -405,6 +405,41 @@
                     </tbody>
                     </table>
       {% endif %}
+      {% if reachable_deeplinks or deeplink_candidates %}
+      <h2><i class="fas fa-external-link-alt"></i> REACHABLE DEEPLINK INVENTORY</h2>
+      <table class="basic">
+        <thead>
+          <tr>
+            <th>COMPONENT / URI</th>
+            <th>DETAILS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in reachable_deeplinks %}
+          <tr>
+            <td>{{ entry.component }}</td>
+            <td>
+              <strong>Status:</strong> {{ entry.external_reachability }} ({{ entry.confidence }})</br>
+              <strong>Why:</strong> {{ entry.match_reason }}</br>
+              {% if entry.candidate_urls %}
+              <strong>Candidate URLs:</strong> {% for url in entry.candidate_urls %}{{ url }}, {% endfor %}</br>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {% for entry in deeplink_candidates %}
+          <tr>
+            <td>{% if entry.component %}{{ entry.component }}{% else %}{{ entry.uri }}{% endif %}</td>
+            <td>
+              <strong>Status:</strong> {{ entry.external_reachability }}{% if entry.confidence %} ({{ entry.confidence }}){% endif %}</br>
+              {% if entry.match_reason %}<strong>Why:</strong> {{ entry.match_reason }}</br>{% endif %}
+              {% if entry.locations %}<strong>Locations:</strong> {% for location in entry.locations %}{{ location }}, {% endfor %}</br>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
     {% if app_type not in 'so' %}
      <h2><i class="fas fa-lock"></i> NETWORK SECURITY</h2>
      {% if network_security and 'network_summary' in network_security and network_security.network_summary|length > 0 %}

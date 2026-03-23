@@ -100,6 +100,14 @@
             </a>
           </li>
           <li class="nav-item">
+            <a href="#deeplink_analysis" class="nav-link">
+              <i class="nav-icon fas fa-external-link-alt"></i>
+              <p>
+                Deeplink Analysis
+              </p>
+            </a>
+          </li>
+          <li class="nav-item">
             <a href="#browsable" class="nav-link">
               <i class="nav-icon fas fa-clone"></i>
               <p>
@@ -901,7 +909,151 @@
     </div>
 </section>
  <!-- ===========================end browsable activities ================================== -->
- <a id="network_security" class="anchor"></a>
+ <a id="deeplink_analysis" class="anchor"></a>
+ <a id="reachable_deeplinks" class="anchor"></a>
+ <section class="content">
+  <div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-12">
+        <div class="card">
+          <div class="card-body">
+              <p>
+             <strong><i class="fas fa-external-link-alt"></i> DEEPLINK ANALYSIS</strong>
+             </p>
+             <p class="text-muted">
+               Best-effort external entry inventory synthesized from manifest filters, exported components, code literals, and deeplink handler evidence.
+               <a href="#browsable">View raw browsable manifest filters</a>.
+             </p>
+             {% if deeplink_inventory.summary %}
+             <p class="text-muted">
+               Manifest browsable components: {{ browsable_activities|length }} |
+               Reachable: {{ deeplink_inventory.summary.reachable_count }} |
+               Other candidates: {{ deeplink_inventory.summary.candidate_count }} |
+               Handler locations: {{ deeplink_inventory.summary.handler_count }} |
+               Probe targets: {{ deeplink_inventory.summary.probe_target_count }}
+             </p>
+             {% endif %}
+             {% if not reachable_deeplinks and not deeplink_candidates and not deeplink_handlers %}
+             <div class="alert alert-info">
+               No externally reachable deeplink candidates were identified from the manifest, code, or bundled resources.
+             </div>
+             {% endif %}
+             {% if reachable_deeplinks %}
+              <p><strong>Externally Reachable Components</strong></p>
+              <div class="table-responsive">
+                <table class="table table-bordered table-hover table-striped">
+                  <thead>
+                    <tr>
+                      <th>COMPONENT</th>
+                      <th>DETAILS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  {% for entry in reachable_deeplinks %}
+                    <tr>
+                      <td>{{ entry.component }}</td>
+                      <td>
+                        <strong>Status:</strong> {{ entry.external_reachability }} ({{ entry.confidence }})<br/>
+                        <strong>Why:</strong> {{ entry.match_reason }}<br/>
+                        {% if entry.candidate_urls %}
+                        <strong>Candidate URLs:</strong> {% for url in entry.candidate_urls %}{{ url }} {% endfor %}<br/>
+                        {% endif %}
+                        {% if entry.handler_locations %}
+                        <strong>Handler Locations:</strong> {% for location in entry.handler_locations %}{{ location }} {% endfor %}<br/>
+                        {% endif %}
+                        {% if entry.literal_locations %}
+                        <strong>Literal Locations:</strong> {% for location in entry.literal_locations %}{{ location }} {% endfor %}<br/>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+             {% endif %}
+             {% if deeplink_candidates %}
+              <p class="mt-3"><strong>Other Candidate Deeplinks</strong></p>
+              <div class="table-responsive mt-3">
+                <table class="table table-bordered table-hover table-striped">
+                  <thead>
+                    <tr>
+                      <th>OTHER CANDIDATES</th>
+                      <th>DETAILS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  {% for entry in deeplink_candidates %}
+                    <tr>
+                      <td>{% if entry.component %}{{ entry.component }}{% else %}{{ entry.uri }}{% endif %}</td>
+                      <td>
+                        <strong>Status:</strong> {{ entry.external_reachability }}{% if entry.confidence %} ({{ entry.confidence }}){% endif %}<br/>
+                        {% if entry.match_reason %}<strong>Why:</strong> {{ entry.match_reason }}<br/>{% endif %}
+                        {% if entry.candidate_urls %}<strong>Candidate URLs:</strong> {% for url in entry.candidate_urls %}{{ url }} {% endfor %}<br/>{% endif %}
+                        {% if entry.locations %}<strong>Locations:</strong> {% for location in entry.locations %}{{ location }} {% endfor %}<br/>{% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+             {% endif %}
+             {% if deeplink_inventory.probe_targets %}
+              <p class="mt-3"><strong>Suggested Dynamic Probe Targets</strong></p>
+              <div class="table-responsive mt-3">
+                <table class="table table-bordered table-hover table-striped">
+                  <thead>
+                    <tr>
+                      <th>URL</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  {% for probe_target in deeplink_inventory.probe_targets %}
+                    <tr>
+                      <td><code>{{ probe_target }}</code></td>
+                    </tr>
+                  {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+             {% endif %}
+             {% if deeplink_handlers %}
+              <p class="mt-3"><strong>Handler Evidence</strong></p>
+              <div class="table-responsive mt-3">
+                <table class="table table-bordered table-hover table-striped">
+                  <thead>
+                    <tr>
+                      <th>HANDLER KIND</th>
+                      <th>LOCATION</th>
+                      <th>SNIPPET</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  {% for handler in deeplink_handlers %}
+                    <tr>
+                      <td>{{ handler.kind }}</td>
+                      <td>{{ handler.location }}</td>
+                      <td><code>{{ handler.snippet }}</code></td>
+                    </tr>
+                  {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+             {% endif %}
+             {% if deeplink_inventory.notes %}
+              <p class="mt-3"><strong>Analysis Notes</strong></p>
+              <ul class="mb-0">
+              {% for note in deeplink_inventory.notes %}
+                <li>{{ note }}</li>
+              {% endfor %}
+              </ul>
+             {% endif %}
+          </div>
+        </div><!-- /.card -->
+        </div>
+    </div>
+  </div>
+ </section>
+  <a id="network_security" class="anchor"></a>
  <section class="content">
   <div class="container-fluid">
     <div class="row">

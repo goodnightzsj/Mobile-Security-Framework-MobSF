@@ -6,10 +6,12 @@ from django.conf import settings
 
 from mobsf.StaticAnalyzer.models import (
     RecentScansDB,
+    StaticAnalyzerAndroid,
 )
 from mobsf.MobSF.utils import (
     get_scan_logs,
     is_md5,
+    python_dict,
 )
 from mobsf.MobSF.views.helpers import request_method
 from mobsf.MobSF.views.home import (
@@ -192,6 +194,34 @@ def api_json_report(request):
         response = make_api_response(
             {'error': 'JSON Generation Error'}, 500)
     return response
+
+
+@request_method(['POST'])
+@csrf_exempt
+def api_android_deeplinks(request):
+    """Return Android deeplink inventory from static analysis."""
+    if 'hash' not in request.POST:
+        return make_api_response(
+            {'error': 'Missing Parameters'}, 422)
+    checksum = request.POST['hash']
+    if not is_md5(checksum):
+        return make_api_response(
+            {'error': 'Invalid Checksum'}, 400)
+    db_obj = StaticAnalyzerAndroid.objects.filter(MD5=checksum)
+    if not db_obj.exists():
+        return make_api_response(
+            {'error': 'Report not Found'}, 404)
+    inventory = python_dict(db_obj[0].DEEPLINK_INVENTORY)
+    probe_results = python_dict(db_obj[0].DEEPLINK_PROBE_RESULTS)
+    return make_api_response({
+        'hash': checksum,
+        'package_name': db_obj[0].PACKAGE_NAME,
+        'deeplink_inventory': inventory,
+        'reachable_deeplinks': inventory.get('reachable', []),
+        'deeplink_candidates': inventory.get('candidates', []),
+        'deeplink_handlers': inventory.get('handlers', []),
+        'deeplink_probe_results': probe_results,
+    }, 200)
 
 
 @request_method(['POST'])

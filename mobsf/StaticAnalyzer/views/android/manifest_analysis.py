@@ -153,47 +153,83 @@ def get_browsable_activities(node, ns):
         path_prefixs = []
         path_patterns = []
         well_known = {}
-        catg = node.getElementsByTagName('category')
-        for cat in catg:
-            if cat.getAttribute(f'{ns}:name') == 'android.intent.category.BROWSABLE':
-                data_tag = node.getElementsByTagName('data')
-                for data in data_tag:
-                    scheme = data.getAttribute(f'{ns}:scheme')
-                    if scheme and scheme not in schemes:
-                        schemes.append(scheme)
-                    mime = data.getAttribute(f'{ns}:mimeType')
-                    if mime and mime not in mime_types:
-                        mime_types.append(mime)
-                    host = data.getAttribute(f'{ns}:host')
-                    if host and host not in hosts:
-                        hosts.append(host)
-                    port = data.getAttribute(f'{ns}:port')
-                    if port and port not in ports:
-                        ports.append(port)
-                    path = data.getAttribute(f'{ns}:path')
-                    if path and path not in paths:
-                        paths.append(path)
-                    path_prefix = data.getAttribute(f'{ns}:pathPrefix')
-                    if path_prefix and path_prefix not in path_prefixs:
-                        path_prefixs.append(path_prefix)
-                    path_pattern = data.getAttribute(f'{ns}:pathPattern')
-                    if path_pattern and path_pattern not in path_patterns:
-                        path_patterns.append(path_pattern)
-                    # Collect possible well-known paths
-                    if (scheme
-                        and scheme in ('http', 'https')
-                        and host
-                            and host != '*'):
-                        host = host.replace('*.', '').replace('#', '')
-                        if not valid_host(host):
-                            logger.warning('Invalid Host: %s', host)
-                            continue
-                        shost = f'{scheme}://{host}'
-                        if port and is_number(port):
-                            c_url = f'{shost}:{port}{WELL_KNOWN_PATH}'
-                        else:
-                            c_url = f'{shost}{WELL_KNOWN_PATH}'
-                        well_known[c_url] = shost
+        filters = []
+        intent_filters = node.childNodes
+        for intent_filter in intent_filters:
+            if intent_filter.nodeName != 'intent-filter':
+                continue
+            cats = intent_filter.getElementsByTagName('category')
+            has_browsable = False
+            for cat in cats:
+                if cat.getAttribute(f'{ns}:name') == 'android.intent.category.BROWSABLE':
+                    has_browsable = True
+                    break
+            if not has_browsable:
+                continue
+            filter_dic = {
+                'schemes': [],
+                'mime_types': [],
+                'hosts': [],
+                'ports': [],
+                'paths': [],
+                'path_prefixs': [],
+                'path_patterns': [],
+            }
+            data_tag = intent_filter.getElementsByTagName('data')
+            for data in data_tag:
+                scheme = data.getAttribute(f'{ns}:scheme')
+                if scheme and scheme not in schemes:
+                    schemes.append(scheme)
+                if scheme and scheme not in filter_dic['schemes']:
+                    filter_dic['schemes'].append(scheme)
+                mime = data.getAttribute(f'{ns}:mimeType')
+                if mime and mime not in mime_types:
+                    mime_types.append(mime)
+                if mime and mime not in filter_dic['mime_types']:
+                    filter_dic['mime_types'].append(mime)
+                host = data.getAttribute(f'{ns}:host')
+                if host and host not in hosts:
+                    hosts.append(host)
+                if host and host not in filter_dic['hosts']:
+                    filter_dic['hosts'].append(host)
+                port = data.getAttribute(f'{ns}:port')
+                if port and port not in ports:
+                    ports.append(port)
+                if port and port not in filter_dic['ports']:
+                    filter_dic['ports'].append(port)
+                path = data.getAttribute(f'{ns}:path')
+                if path and path not in paths:
+                    paths.append(path)
+                if path and path not in filter_dic['paths']:
+                    filter_dic['paths'].append(path)
+                path_prefix = data.getAttribute(f'{ns}:pathPrefix')
+                if path_prefix and path_prefix not in path_prefixs:
+                    path_prefixs.append(path_prefix)
+                if path_prefix and path_prefix not in filter_dic['path_prefixs']:
+                    filter_dic['path_prefixs'].append(path_prefix)
+                path_pattern = data.getAttribute(f'{ns}:pathPattern')
+                if path_pattern and path_pattern not in path_patterns:
+                    path_patterns.append(path_pattern)
+                if path_pattern and path_pattern not in filter_dic['path_patterns']:
+                    filter_dic['path_patterns'].append(path_pattern)
+                # Collect possible well-known paths
+                if (scheme
+                    and scheme in ('http', 'https')
+                    and host
+                        and host != '*'):
+                    host = host.replace('*.', '').replace('#', '')
+                    if not valid_host(host):
+                        logger.warning('Invalid Host: %s', host)
+                        continue
+                    shost = f'{scheme}://{host}'
+                    if port and is_number(port):
+                        c_url = f'{shost}:{port}{WELL_KNOWN_PATH}'
+                    else:
+                        c_url = f'{shost}{WELL_KNOWN_PATH}'
+                    well_known[c_url] = shost
+            filter_dic['schemes'] = [
+                scheme + '://' for scheme in filter_dic['schemes']]
+            filters.append(filter_dic)
         schemes = [scheme + '://' for scheme in schemes]
         browse_dic['schemes'] = schemes
         browse_dic['mime_types'] = mime_types
@@ -204,6 +240,7 @@ def get_browsable_activities(node, ns):
         browse_dic['path_patterns'] = path_patterns
         browse_dic['browsable'] = bool(browse_dic['schemes'])
         browse_dic['well_known'] = well_known
+        browse_dic['filters'] = filters
         return browse_dic
     except Exception:
         logger.exception('Getting Browsable Activities')

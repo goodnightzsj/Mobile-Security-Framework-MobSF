@@ -17,6 +17,12 @@ from mobsf.DynamicAnalyzer.views.android.operations import (
 from mobsf.DynamicAnalyzer.views.android.environment import (
     Environment,
 )
+from mobsf.DynamicAnalyzer.views.android.deeplink import (
+    get_inventory_from_db,
+    get_probe_targets,
+    persist_deeplink_probe_results,
+    run_deeplink_probes,
+)
 from mobsf.DynamicAnalyzer.views.android.tests_xposed import (
     download_xposed_log,
 )
@@ -103,6 +109,59 @@ def start_deeplink(request, api=False):
         logger.exception('Start Activity')
         data = {'status': 'failed', 'message': str(exp)}
     return send_response(data, api)
+
+# AJAX
+
+
+@login_required
+@permission_required(Permissions.SCAN)
+@require_http_methods(['POST'])
+def probe_deeplinks(request, api=False):
+    """Batch probe saved or provided deeplink candidates."""
+    try:
+        md5_hash = request.POST['hash']
+        if not is_md5(md5_hash):
+            return invalid_params(api)
+        manual_urls = request.POST.getlist('urls[]')
+        raw_urls = request.POST.get('urls', '')
+        if raw_urls:
+            manual_urls.extend([
+                item.strip() for item in re.split(r'[\n,]+', raw_urls)
+                if item.strip()
+            ])
+        if any(cmd_injection_check(url) for url in manual_urls):
+            return invalid_params(api)
+        static_android_db, inventory, _existing = get_inventory_from_db(md5_hash)
+        if not static_android_db:
+            data = {'status': 'failed',
+                    'message': 'Static analysis results not found'}
+            return send_response(data, api)
+        package = static_android_db.PACKAGE_NAME
+        targets = get_probe_targets(inventory, manual_urls)
+        if not targets:
+            data = {'status': 'failed',
+                    'message': 'No deeplink candidates available to probe'}
+            return send_response(data, api)
+        env = Environment()
+        report = run_deeplink_probes(env, package, targets)
+        persist_deeplink_probe_results(md5_hash, report)
+        data = {
+            'status': 'ok',
+            'summary': {
+                'generated_at': report['generated_at'],
+                'package': report['package'],
+                'total': report['total'],
+                'matched': report['matched'],
+                'missed': report['missed'],
+                'errors': report['errors'],
+            },
+            'results': report['results'],
+        }
+    except Exception as exp:
+        logger.exception('Probe Deeplinks')
+        data = {'status': 'failed', 'message': str(exp)}
+    return send_response(data, api)
+
 
 # AJAX
 

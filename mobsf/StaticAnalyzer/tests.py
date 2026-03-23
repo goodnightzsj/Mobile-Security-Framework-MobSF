@@ -3,12 +3,25 @@ import json
 import logging
 import os
 import platform
+import tempfile
+from pathlib import Path
+from unittest import mock
 
 from mobsf.MobSF.init import api_key
 
 from django.conf import settings
 from django.http import HttpResponse
 from django.test import Client, TestCase
+
+from mobsf.DynamicAnalyzer.views.android.deeplink import (
+    get_probe_targets,
+    parse_resumed_activity,
+    run_deeplink_probes,
+)
+from mobsf.StaticAnalyzer.models import StaticAnalyzerAndroid
+from mobsf.StaticAnalyzer.views.android.deeplink_analysis import (
+    analyze_deeplinks,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -599,3 +612,137 @@ class StaticAnalyzerAndAPI(TestCase):
     def test_rest_api(self):
         resp = self.http_client.post('/tests/?module=api')
         self.assertEqual(resp.status_code, 200)
+
+
+class DeeplinkInventoryTests(TestCase):
+    """Focused tests for Android deeplink inventory helpers."""
+
+    def setUp(self):
+        self.http_client = Client()
+
+    def test_analyze_deeplinks_merges_manifest_and_code_evidence(self):
+        checksum = 'a' * 32
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            java_dir = root / 'app' / 'src' / 'main' / 'java' / 'com' / 'example'
+            res_dir = root / 'app' / 'src' / 'main' / 'res' / 'navigation'
+            java_dir.mkdir(parents=True)
+            res_dir.mkdir(parents=True)
+            (java_dir / 'LinkActivity.kt').write_text(
+                'class LinkActivity {\n'
+                '  fun onNewIntent(intent: Intent) {\n'
+                '    intent.getData()?.getQueryParameter("id")\n'
+                '  }\n'
+                '}\n',
+                encoding='utf-8')
+            (res_dir / 'nav.xml').write_text(
+                '<deepLink app:uri="https://example.com/orders/sample" />\n',
+                encoding='utf-8')
+            app_dic = {'app_dir': tmp_dir, 'zipped': 'studio'}
+            man_an_dic = {
+                'exported_act': ['com.example.LinkActivity'],
+                'browsable_activities': {
+                    'com.example.LinkActivity': {
+                        'schemes': ['https://'],
+                        'mime_types': [],
+                        'hosts': ['example.com'],
+                        'ports': [],
+                        'paths': ['/orders/sample'],
+                        'path_prefixs': [],
+                        'path_patterns': [],
+                        'filters': [{
+                            'schemes': ['https://'],
+                            'mime_types': [],
+                            'hosts': ['example.com'],
+                            'ports': [],
+                            'paths': ['/orders/sample'],
+                            'path_prefixs': [],
+                            'path_patterns': [],
+                        }],
+                    },
+                },
+            }
+            inventory = analyze_deeplinks(checksum, app_dic, man_an_dic)
+            self.assertEqual(inventory['summary']['reachable_count'], 1)
+            self.assertGreaterEqual(inventory['summary']['handler_count'], 1)
+            reachable = inventory['reachable'][0]
+            self.assertIn('https://example.com/orders/sample',
+                          reachable['candidate_urls'])
+            self.assertTrue(reachable['handler_locations'])
+
+    def test_parse_resumed_activity(self):
+        output = (
+            'mResumedActivity: ActivityRecord{123 u0 '
+            'com.example/.LinkActivity t10}'
+        )
+        parsed = parse_resumed_activity(output)
+        self.assertEqual(parsed['package'], 'com.example')
+        self.assertEqual(parsed['activity'], '.LinkActivity')
+
+    def test_get_probe_targets_skips_unsafe_urls(self):
+        inventory = {
+            'probe_targets': [
+                {'url': 'https://example.com/a', 'source': 'manifest'},
+                {'url': 'intent://example/#Intent;scheme=test;end',
+                 'source': 'code'},
+            ],
+        }
+        targets = get_probe_targets(inventory)
+        self.assertEqual(len(targets), 1)
+        self.assertEqual(targets[0]['url'], 'https://example.com/a')
+
+    def test_run_deeplink_probes_marks_matching_package(self):
+        class FakeEnv:
+            def adb_command(self, cmd, shell=False, silent=False):
+                if cmd[:2] == ['am', 'force-stop']:
+                    return b''
+                if cmd[:2] == ['am', 'start']:
+                    return b'Status: ok\nActivity: com.example/.LinkActivity\n'
+                if cmd[:2] == ['dumpsys', 'activity']:
+                    return (
+                        b'mResumedActivity: ActivityRecord{123 u0 '
+                        b'com.example/.LinkActivity t10}')
+                return b''
+
+            def wait(self, sec):
+                return None
+
+        report = run_deeplink_probes(
+            FakeEnv(),
+            'com.example',
+            [{
+                'url': 'https://example.com/orders/sample',
+                'source': 'manifest',
+                'component': 'com.example.LinkActivity',
+                'confidence': 'high',
+            }])
+        self.assertEqual(report['matched'], 1)
+        self.assertEqual(report['results'][0]['status'], 'matched')
+
+    @mock.patch('mobsf.MobSF.views.api.api_static_analysis.is_md5',
+                return_value=True)
+    def test_android_deeplinks_api_returns_inventory(self, _mock_md5):
+        checksum = 'b' * 32
+        StaticAnalyzerAndroid.objects.create(
+            FILE_NAME='test.apk',
+            APP_NAME='Test',
+            APP_TYPE='apk',
+            MD5=checksum,
+            PACKAGE_NAME='com.example',
+            DEEPLINK_INVENTORY={
+                'summary': {'reachable_count': 1},
+                'reachable': [{'component': 'com.example.LinkActivity'}],
+                'candidates': [],
+                'handlers': [],
+                'probe_targets': [],
+            },
+        )
+        auth = api_key()
+        resp = self.http_client.post(
+            '/api/v1/android/deeplinks',
+            {'hash': checksum},
+            HTTP_AUTHORIZATION=auth)
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(resp.content.decode('utf-8'))
+        self.assertIn('deeplink_inventory', data)
+        self.assertEqual(data['package_name'], 'com.example')

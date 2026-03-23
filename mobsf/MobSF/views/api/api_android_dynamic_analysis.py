@@ -155,6 +155,19 @@ def api_start_activity(request):
 
 @request_method(['POST'])
 @csrf_exempt
+def api_probe_deeplinks(request):
+    """POST - Batch probe deeplink inventory."""
+    if 'hash' not in request.POST:
+        return make_api_response(
+            {'error': 'Missing Parameters'}, 422)
+    resp = tests_common.probe_deeplinks(request, True)
+    if resp['status'] == 'ok':
+        return make_api_response(resp, 200)
+    return make_api_response(resp, 500)
+
+
+@request_method(['POST'])
+@csrf_exempt
 def api_tls_tester(request):
     """POST - TLS/SSL Security Tester."""
     if 'hash' not in request.POST:

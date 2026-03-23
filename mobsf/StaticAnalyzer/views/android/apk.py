@@ -46,6 +46,9 @@ from mobsf.StaticAnalyzer.views.android.db_interaction import (
     get_context_from_db_entry,
     save_get_ctx,
 )
+from mobsf.StaticAnalyzer.views.android.deeplink_analysis import (
+    analyze_deeplinks,
+)
 from mobsf.StaticAnalyzer.views.android.icon_analysis import (
     get_icon_apk,
     get_icon_from_src,
@@ -220,6 +223,10 @@ def apk_analysis_task(checksum, app_dic, rescan, queue=False):
         code_an_dic['domains'] = MalwareDomainCheck().scan(
             checksum,
             code_an_dic['urls_list'])
+        code_an_dic['deeplink_inventory'] = analyze_deeplinks(
+            checksum,
+            app_dic,
+            man_analysis)
         context = save_get_ctx(
             app_dic,
             man_data_dic,
@@ -335,6 +342,10 @@ def src_analysis_task(checksum, app_dic, rescan, pro_type, queue=False):
         code_an_dic['domains'] = MalwareDomainCheck().scan(
             checksum,
             code_an_dic['urls_list'])
+        code_an_dic['deeplink_inventory'] = analyze_deeplinks(
+            checksum,
+            app_dic,
+            man_analysis)
         # Extract Trackers from Domains
         trackers = Trackers.Trackers(
             checksum,
