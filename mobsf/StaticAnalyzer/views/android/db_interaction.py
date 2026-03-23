@@ -17,6 +17,9 @@ from mobsf.StaticAnalyzer.views.common.suppression import (
     process_suppression,
     process_suppression_manifest,
 )
+from mobsf.StaticAnalyzer.views.android.deeplink_analysis import (
+    normalize_deeplink_inventory,
+)
 
 """Module holding the functions for the db."""
 
@@ -36,6 +39,8 @@ def get_context_from_db_entry(db_entry: QuerySet) -> dict:
         manifest_analysis = process_suppression_manifest(
             python_list(db_entry[0].MANIFEST_ANALYSIS),
             package)
+        deeplink_inventory = normalize_deeplink_inventory(
+            python_dict(db_entry[0].DEEPLINK_INVENTORY))
         context = {
             'version': settings.MOBSF_VER,
             'title': 'Static Analysis',
@@ -51,8 +56,7 @@ def get_context_from_db_entry(db_entry: QuerySet) -> dict:
             'exported_activities': db_entry[0].EXPORTED_ACTIVITIES,
             'browsable_activities': python_dict(
                 db_entry[0].BROWSABLE_ACTIVITIES),
-            'deeplink_inventory': python_dict(
-                db_entry[0].DEEPLINK_INVENTORY),
+            'deeplink_inventory': deeplink_inventory,
             'deeplink_probe_results': python_dict(
                 db_entry[0].DEEPLINK_PROBE_RESULTS),
             'activities': python_list(db_entry[0].ACTIVITIES),
@@ -124,6 +128,8 @@ def get_context_from_analysis(app_dic,
         manifest_analysis = process_suppression_manifest(
             man_an_dic['manifest_anal'],
             package)
+        deeplink_inventory = normalize_deeplink_inventory(
+            code_an_dic.get('deeplink_inventory', {}))
         context = {
             'title': 'Static Analysis',
             'version': settings.MOBSF_VER,
@@ -138,7 +144,7 @@ def get_context_from_analysis(app_dic,
             'main_activity': man_data_dic['mainactivity'],
             'exported_activities': man_an_dic['exported_act'],
             'browsable_activities': man_an_dic['browsable_activities'],
-            'deeplink_inventory': code_an_dic.get('deeplink_inventory', {}),
+            'deeplink_inventory': deeplink_inventory,
             'deeplink_probe_results': code_an_dic.get(
                 'deeplink_probe_results', {}),
             'activities': man_data_dic['activities'],

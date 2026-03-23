@@ -21,6 +21,7 @@ from mobsf.DynamicAnalyzer.views.android.deeplink import (
 from mobsf.StaticAnalyzer.models import StaticAnalyzerAndroid
 from mobsf.StaticAnalyzer.views.android.deeplink_analysis import (
     analyze_deeplinks,
+    normalize_deeplink_inventory,
 )
 
 logger = logging.getLogger(__name__)
@@ -746,3 +747,54 @@ class DeeplinkInventoryTests(TestCase):
         data = json.loads(resp.content.decode('utf-8'))
         self.assertIn('deeplink_inventory', data)
         self.assertEqual(data['package_name'], 'com.example')
+
+    def test_normalize_deeplink_inventory_backfills_candidate_urls(self):
+        inventory = normalize_deeplink_inventory({
+            'candidates': [{
+                'uri': 'https://example.com/deep/link',
+                'confidence': 'low',
+                'external_reachability': 'unknown',
+                'locations': ['apktool_out/res/raw/routes.xml:2'],
+            }],
+        })
+        self.assertEqual(
+            inventory['candidates'][0]['candidate_urls'],
+            ['https://example.com/deep/link'],
+        )
+
+    @mock.patch('mobsf.MobSF.views.api.api_static_analysis.is_md5',
+                return_value=True)
+    def test_android_deeplinks_api_normalizes_legacy_candidates(
+            self, _mock_md5):
+        checksum = 'c' * 32
+        StaticAnalyzerAndroid.objects.create(
+            FILE_NAME='legacy.apk',
+            APP_NAME='Legacy',
+            APP_TYPE='apk',
+            MD5=checksum,
+            PACKAGE_NAME='com.example.legacy',
+            DEEPLINK_INVENTORY={
+                'summary': {'candidate_count': 1},
+                'reachable': [],
+                'candidates': [{
+                    'uri': 'https://example.com/legacy',
+                    'confidence': 'low',
+                    'external_reachability': 'unknown',
+                    'locations': ['apktool_out/res/raw/routes.xml:2'],
+                    'matched_components': [],
+                }],
+                'handlers': [],
+                'probe_targets': [],
+            },
+        )
+        auth = api_key(settings.MOBSF_HOME)
+        resp = self.http_client.post(
+            '/api/v1/android/deeplinks',
+            {'hash': checksum},
+            HTTP_AUTHORIZATION=auth)
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(resp.content.decode('utf-8'))
+        self.assertEqual(
+            data['deeplink_candidates'][0]['candidate_urls'],
+            ['https://example.com/legacy'],
+        )

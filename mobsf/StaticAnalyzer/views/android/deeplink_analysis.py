@@ -409,6 +409,7 @@ def _serialize_code_candidates(code_candidates):
             'confidence': 'low',
             'external_reachability': 'unknown',
             'kind': ', '.join(sorted(candidate['kinds'])),
+            'candidate_urls': [uri],
             'locations': _dedupe(candidate['locations'])[:MAX_EVIDENCE_ITEMS],
             'matched_components': matched_components,
         })
@@ -513,3 +514,59 @@ def analyze_deeplinks(checksum, app_dic, man_an_dic):
         logger.exception(msg)
         append_scan_status(checksum, msg, repr(exp))
         return inventory
+
+
+def _normalize_inventory_entry(entry):
+    """Backfill optional deeplink inventory fields for legacy records."""
+    normalized = dict(entry or {})
+    uri = normalized.get('uri', '')
+    candidate_urls = normalized.get('candidate_urls')
+    if candidate_urls is None:
+        candidate_urls = [uri] if uri else []
+    normalized['candidate_urls'] = _dedupe(candidate_urls)
+    for key in (
+        'locations',
+        'handler_locations',
+        'literal_locations',
+        'code_literals',
+        'matched_components',
+    ):
+        value = normalized.get(key)
+        if not value:
+            normalized[key] = []
+        else:
+            normalized[key] = _dedupe(value)
+    if 'confidence' not in normalized:
+        normalized['confidence'] = ''
+    if 'external_reachability' not in normalized:
+        normalized['external_reachability'] = 'unknown'
+    return normalized
+
+
+def normalize_deeplink_inventory(inventory):
+    """Normalize deeplink inventory shape for templates and APIs."""
+    source = dict(inventory or {})
+    reachable = [
+        _normalize_inventory_entry(entry)
+        for entry in source.get('reachable', [])
+    ]
+    candidates = [
+        _normalize_inventory_entry(entry)
+        for entry in source.get('candidates', [])
+    ]
+    handlers = list(source.get('handlers', []))
+    probe_targets = list(source.get('probe_targets', []))
+    notes = list(source.get('notes', []))
+    summary = dict(source.get('summary', {}))
+    summary.setdefault('reachable_count', len(reachable))
+    summary.setdefault('candidate_count', len(candidates))
+    summary.setdefault('handler_count', len(handlers))
+    summary.setdefault('probe_target_count', len(probe_targets))
+    return {
+        'summary': summary,
+        'reachable': reachable,
+        'candidates': candidates,
+        'handlers': handlers,
+        'probe_targets': probe_targets,
+        'notes': notes,
+    }

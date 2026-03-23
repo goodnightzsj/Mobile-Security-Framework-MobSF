@@ -36,6 +36,9 @@ from mobsf.StaticAnalyzer.views.common.suppression import (
 from mobsf.StaticAnalyzer.views.common.pdf import pdf
 from mobsf.StaticAnalyzer.views.common.appsec import appsec_dashboard
 from mobsf.StaticAnalyzer.views.windows import windows
+from mobsf.StaticAnalyzer.views.android.deeplink_analysis import (
+    normalize_deeplink_inventory,
+)
 
 
 @request_method(['POST'])
@@ -211,7 +214,8 @@ def api_android_deeplinks(request):
     if not db_obj.exists():
         return make_api_response(
             {'error': 'Report not Found'}, 404)
-    inventory = python_dict(db_obj[0].DEEPLINK_INVENTORY)
+    inventory = normalize_deeplink_inventory(
+        python_dict(db_obj[0].DEEPLINK_INVENTORY))
     probe_results = python_dict(db_obj[0].DEEPLINK_PROBE_RESULTS)
     return make_api_response({
         'hash': checksum,
