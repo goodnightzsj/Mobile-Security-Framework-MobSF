@@ -20,6 +20,7 @@ from mobsf.DynamicAnalyzer.views.android.deeplink import (
 )
 from mobsf.StaticAnalyzer.models import StaticAnalyzerAndroid
 from mobsf.StaticAnalyzer.views.android.deeplink_analysis import (
+    _is_deeplink_uri,
     analyze_deeplinks,
     normalize_deeplink_inventory,
 )
@@ -679,6 +680,10 @@ class DeeplinkInventoryTests(TestCase):
         parsed = parse_resumed_activity(output)
         self.assertEqual(parsed['package'], 'com.example')
         self.assertEqual(parsed['activity'], '.LinkActivity')
+
+    def test_is_deeplink_uri_ignores_invalid_ipv6_urls(self):
+        self.assertFalse(_is_deeplink_uri('https://[oops'))
+        self.assertTrue(_is_deeplink_uri('https://example.com/path'))
 
     def test_get_probe_targets_skips_unsafe_urls(self):
         inventory = {

@@ -65,7 +65,10 @@ def _is_deeplink_uri(uri):
         return False
     if uri.startswith('intent://'):
         return True
-    parsed = urlparse(uri)
+    try:
+        parsed = urlparse(uri)
+    except ValueError:
+        return False
     if not parsed.scheme:
         return False
     return parsed.scheme.lower() not in EXCLUDED_SCHEMES
