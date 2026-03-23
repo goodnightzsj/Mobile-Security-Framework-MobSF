@@ -28,7 +28,7 @@ jobs:
                 push: false
                 context: .
                 platforms: linux/amd64
-                tags: opensecurity/mobile-security-framework-mobsf:latest
+                tags: mobile-security-framework-mobsf:test-amd64
         -
             name: Build ARM64 image
             id: docker_build_arm
@@ -37,4 +37,4 @@ jobs:
                 push: false
                 context: .
                 platforms: linux/arm64
-                tags: opensecurity/mobile-security-framework-mobsf:latest
+                tags: mobile-security-framework-mobsf:test-arm64

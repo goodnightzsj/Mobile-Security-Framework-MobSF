@@ -202,12 +202,20 @@ def _scan_lines(relative_path, lines, kind='code'):
             regexes = [NAV_DEEPLINK_REGEX, DEEPLINK_LITERAL_REGEX]
         for regex in regexes:
             for match in regex.finditer(line):
-                uri = _clean_uri(match.group(1) if regex is NAV_DEEPLINK_REGEX else match.group('uri'))
+                if regex is NAV_DEEPLINK_REGEX:
+                    raw_uri = match.group(1)
+                else:
+                    raw_uri = match.group('uri')
+                uri = _clean_uri(raw_uri)
                 if not _is_deeplink_uri(uri):
                     continue
+                if regex is NAV_DEEPLINK_REGEX:
+                    candidate_kind = 'navigation_xml'
+                else:
+                    candidate_kind = 'uri_literal'
                 candidates.append({
                     'uri': uri,
-                    'kind': 'navigation_xml' if regex is NAV_DEEPLINK_REGEX else 'uri_literal',
+                    'kind': candidate_kind,
                     'location': f'{relative_path}:{line_no}',
                     'snippet': line[:200],
                     'component_hints': component_hints,
@@ -244,7 +252,8 @@ def _scan_code_and_resources(checksum, app_dic):
     handlers = []
     for src_dir in _source_dirs(app_dir, app_type):
         for file_path in src_dir.rglob('*'):
-            if file_path.suffix not in SCANNED_SOURCE_EXTENSIONS or not file_path.is_file():
+            if (file_path.suffix not in SCANNED_SOURCE_EXTENSIONS
+                    or not file_path.is_file()):
                 continue
             try:
                 content = file_path.read_text('utf-8', 'ignore').splitlines()
@@ -256,7 +265,8 @@ def _scan_code_and_resources(checksum, app_dic):
             handlers.extend(file_handlers)
     for res_dir in _resource_dirs(app_dir, app_type):
         for file_path in res_dir.rglob('*'):
-            if file_path.suffix not in SCANNED_RESOURCE_EXTENSIONS or not file_path.is_file():
+            if (file_path.suffix not in SCANNED_RESOURCE_EXTENSIONS
+                    or not file_path.is_file()):
                 continue
             try:
                 content = file_path.read_text('utf-8', 'ignore').splitlines()
@@ -288,7 +298,11 @@ def _build_manifest_entries(man_an_dic):
         entries.append({
             'component': component,
             'exported': component in exported,
-            'external_reachability': 'reachable' if component in exported else 'not_exported',
+            'external_reachability': (
+                'reachable'
+                if component in exported
+                else 'not_exported'
+            ),
             'confidence': 'high' if component in exported else 'low',
             'match_reason': (
                 'BROWSABLE activity is exported through the manifest'
@@ -375,8 +389,10 @@ def _serialize_manifest_entries(entries, include_unreachable=False):
             'path_prefixs': _dedupe(entry['path_prefixs']),
             'path_patterns': _dedupe(entry['path_patterns']),
             'candidate_urls': _dedupe(entry['candidate_urls']),
-            'handler_locations': _dedupe(entry['handler_locations'])[:MAX_EVIDENCE_ITEMS],
-            'literal_locations': _dedupe(entry['literal_locations'])[:MAX_EVIDENCE_ITEMS],
+            'handler_locations': _dedupe(
+                entry['handler_locations'])[:MAX_EVIDENCE_ITEMS],
+            'literal_locations': _dedupe(
+                entry['literal_locations'])[:MAX_EVIDENCE_ITEMS],
             'code_literals': _dedupe(entry['code_literals'])[:MAX_EVIDENCE_ITEMS],
         })
     return serialized
@@ -458,8 +474,14 @@ def analyze_deeplinks(checksum, app_dic, man_an_dic):
         'handlers': [],
         'probe_targets': [],
         'notes': [
-            'Manifest reachability is best-effort and based on exported + BROWSABLE analysis.',
-            'Code-derived deeplink candidates cannot guarantee external reachability without dynamic validation.',
+            (
+                'Manifest reachability is best-effort and based on '
+                'exported + BROWSABLE analysis.'
+            ),
+            (
+                'Code-derived deeplink candidates cannot guarantee '
+                'external reachability without dynamic validation.'
+            ),
         ],
     }
     try:

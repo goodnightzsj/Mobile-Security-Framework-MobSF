@@ -12,13 +12,29 @@ logger = logging.getLogger(__name__)
 
 TOP_ACTIVITY_PATTERNS = (
     re.compile(
-        r'mResumedActivity:\s+ActivityRecord\{[^\n]*\s(?P<package>[\w.]+)/(?P<activity>[^ }\n]+)'),
+        (
+            r'mResumedActivity:\s+ActivityRecord\{[^\n]*\s'
+            r'(?P<package>[\w.]+)/(?P<activity>[^ }\n]+)'
+        ),
+    ),
     re.compile(
-        r'topResumedActivity=ActivityRecord\{[^\n]*\s(?P<package>[\w.]+)/(?P<activity>[^ }\n]+)'),
+        (
+            r'topResumedActivity=ActivityRecord\{[^\n]*\s'
+            r'(?P<package>[\w.]+)/(?P<activity>[^ }\n]+)'
+        ),
+    ),
     re.compile(
-        r'ResumedActivity:\s+ActivityRecord\{[^\n]*\s(?P<package>[\w.]+)/(?P<activity>[^ }\n]+)'),
+        (
+            r'ResumedActivity:\s+ActivityRecord\{[^\n]*\s'
+            r'(?P<package>[\w.]+)/(?P<activity>[^ }\n]+)'
+        ),
+    ),
     re.compile(
-        r'mFocusedApp=.*ActivityRecord\{[^\n]*\s(?P<package>[\w.]+)/(?P<activity>[^ }\n]+)'),
+        (
+            r'mFocusedApp=.*ActivityRecord\{[^\n]*\s'
+            r'(?P<package>[\w.]+)/(?P<activity>[^ }\n]+)'
+        ),
+    ),
 )
 START_ACTIVITY_PATTERN = re.compile(
     r'(?:Activity:|cmp=)(?P<package>[\w.]+)/(?P<activity>[^ }\n]+)')
@@ -52,7 +68,10 @@ def get_inventory_from_db(checksum):
         return None, {}, {}
 
 
-def get_probe_targets(inventory, extra_urls=None, limit=MAX_DYNAMIC_PROBE_TARGETS):
+def get_probe_targets(
+        inventory,
+        extra_urls=None,
+        limit=MAX_DYNAMIC_PROBE_TARGETS):
     """Build a deduped deeplink probe target list."""
     targets = []
     for item in inventory.get('probe_targets', []):

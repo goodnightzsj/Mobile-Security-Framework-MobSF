@@ -737,7 +737,7 @@ class DeeplinkInventoryTests(TestCase):
                 'probe_targets': [],
             },
         )
-        auth = api_key()
+        auth = api_key(settings.MOBSF_HOME)
         resp = self.http_client.post(
             '/api/v1/android/deeplinks',
             {'hash': checksum},
