@@ -1,7 +1,7 @@
 # -*- coding: utf_8 -*-
 """Helpers for Android deeplink inventory probing."""
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 import logging
 import re
 
