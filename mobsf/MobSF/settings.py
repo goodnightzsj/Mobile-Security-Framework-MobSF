@@ -8,6 +8,8 @@ MobSF and Django settings
 import logging
 import os
 
+from django.utils.translation import gettext_lazy as _
+
 from mobsf.MobSF.init import (
     first_run,
     get_mobsf_home,
@@ -206,17 +208,29 @@ MIDDLEWARE_CLASSES = (
 MIDDLEWARE = (
     'mobsf.MobSF.views.api.api_middleware.RestApiAuthMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_ratelimit.middleware.RatelimitMiddleware',
+    'mobsf.MobSF.i18n.middleware.UiTranslationMiddleware',
 )
 ROOT_URLCONF = 'mobsf.MobSF.urls'
 WSGI_APPLICATION = 'mobsf.MobSF.wsgi.application'
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = os.getenv('MOBSF_LANGUAGE_CODE', 'zh-hans')
+LANGUAGES = (
+    ('zh-hans', _('Simplified Chinese')),
+    ('en', _('English')),
+)
 TIME_ZONE = os.getenv('TIME_ZONE', 'UTC')
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
+LOCALE_PATHS = (
+    os.path.join(BASE_DIR, 'locale'),
+)
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

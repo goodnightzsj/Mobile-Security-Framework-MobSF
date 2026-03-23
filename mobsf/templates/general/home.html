@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ request.LANGUAGE_CODE|default:'zh-hans' }}">
    <head>
       <meta charset="utf-8">
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -41,6 +41,16 @@
             <a class="nav-link">
                 <form action="/search" method="GET">
                     <input name="query" type="text" class="form-control form-control-sm" placeholder="Search">
+                </form>
+            </a>
+            <a class="nav-link">
+                <form action="{% url 'set_language' %}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <select class="form-control form-control-sm" name="language" onchange="this.form.submit()">
+                        <option value="zh-hans" {% if request.LANGUAGE_CODE == 'zh-hans' %}selected{% endif %}>简体中文</option>
+                        <option value="en" {% if request.LANGUAGE_CODE|slice:':2' == 'en' %}selected{% endif %}>English</option>
+                    </select>
                 </form>
             </a>
         </nav>

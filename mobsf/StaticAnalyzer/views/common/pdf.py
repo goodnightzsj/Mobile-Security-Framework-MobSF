@@ -11,9 +11,11 @@ import platform
 
 from django.http import HttpResponse
 from django.template.loader import get_template
+from django.utils.translation import get_language_from_request
 
 import mobsf.MalwareAnalyzer.views.VirusTotal as VirusTotal
 from mobsf.MobSF import settings
+from mobsf.MobSF.i18n.ui_localizer import localize_html
 from mobsf.MobSF.utils import (
     is_md5,
     print_n_send_error_response,
@@ -130,7 +132,12 @@ def pdf(request, checksum, api=False, jsonres=False):
                 proxies, _ = upstream_proxy('https')
                 if proxies['https']:
                     options['proxy'] = proxies['https']
-                html = template.render(context)
+                html = template.render(context, request)
+                html = localize_html(
+                    html,
+                    getattr(request, 'LANGUAGE_CODE', '')
+                    or get_language_from_request(request),
+                )
                 pdf_dat = pdfkit.from_string(html, False, options=options)
                 if api:
                     return {'pdf_dat': pdf_dat}
